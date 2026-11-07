@@ -1,2 +1,20 @@
 # SPDX-License-Identifier: Apache-2.0
-# Fleet manifest reserved for WP-9.
+name: "wavefunction-search-agent"
+version: "0.1.0"
+description: "Wavefunction Field: stigmergic intent routing for agents with verification-gated, trust-scoped trails"
+pillar: "infrastructure"
+status: "prototype"
+permission_tier: 0
+deploy_targets:
+  primary: "mcp-server"
+  secondary: ["docker"]
+dependencies:
+  agents:
+    - "agent-identity-registry-agent"   # optional, WF_IDENTITY_REGISTRY_URL
+    - "agent-trust-oracle-agent"        # optional, WF_TRUST_ORACLE_URL
+    - "agent-compute-ledger-agent"      # optional, WF_COMPUTE_LEDGER_URL
+env_vars: ["WF_DB_PATH", "WF_FIELD_KEY_FILE", "WF_PUBLIC_URL", "WF_TRUSTED_EMITTERS", "WF_TRUSTED_VERIFIERS",
+           "WF_OPERATORS", "WF_IDENTITY_REGISTRY_URL", "WF_TRUST_ORACLE_URL", "WF_TRUST_MIN_SCORE", "WF_COMPUTE_LEDGER_URL"]
+invariants:
+  I-6: "routing amplitudes satisfy sum(psi^2) = 1 (INV-RT1)"
+  I-7: "entanglement (resonance) is symmetric (INV-RT5)"
