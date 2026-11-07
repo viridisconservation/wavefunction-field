@@ -1,0 +1,76 @@
+{
+  "$comment": "Frozen default parameters for Wavefunction Field Protocol v0.1. Loaded into an immutable FieldParams object; params_sha256 = sha256(canonical(this object minus $comment)) is published in the field manifest. Changing any value requires a decision record in docs/decisions/ and a full re-run of the simulation suite.",
+  "protocol": "wavefunction-field-v1",
+  "version": "0.1.0",
+  "auth": {
+    "skew_s": 300,
+    "nonce_pattern": "^[A-Za-z0-9._:-]{8,160}$"
+  },
+  "amplitude": {
+    "A_max": 1.0,
+    "a_per_priority": 0.1,
+    "half_life_s": 86400,
+    "A_alive": 0.01,
+    "delta_signal": 0.05,
+    "untrusted_signal_cap": 0.1
+  },
+  "resonance": {
+    "theta_res": 0.6,
+    "gamma_res": 0.25,
+    "max_links_per_intent": 16
+  },
+  "trail": {
+    "r_base": 1.0,
+    "r_fail": 0.5,
+    "half_life_s": 1209600,
+    "w_min": 0.05,
+    "w_max": 5.0
+  },
+  "route": {
+    "alpha": 1.0,
+    "beta": 2.0,
+    "eta_min": 0.01,
+    "k": 10,
+    "k_explore": 2,
+    "max_candidates": 500
+  },
+  "sense": {
+    "alpha": 1.0,
+    "beta": 1.0,
+    "lambda_lease": 0.3,
+    "k": 10
+  },
+  "similarity": {
+    "w_tag": 0.5,
+    "w_text": 0.5,
+    "stopwords": ["a", "an", "and", "are", "as", "at", "be", "by", "for", "from", "in", "into", "is", "it", "of", "on", "or", "that", "the", "this", "to", "with"]
+  },
+  "intent": {
+    "ttl_min_s": 60,
+    "ttl_max_s": 2592000,
+    "max_depth": 4,
+    "verify_window_s": 259200
+  },
+  "lease": {
+    "max_s": 3600
+  },
+  "limits": {
+    "goal_chars": 2000,
+    "summary_chars": 500,
+    "agent_description_chars": 1000,
+    "agent_name_chars": 80,
+    "evidence_summary_chars": 1000,
+    "inline_artifact_bytes": 65536,
+    "json_schema_bytes": 16384,
+    "max_capabilities": 32,
+    "max_intent_tags": 16,
+    "max_hypotheses": 8,
+    "max_designated_verifiers": 5,
+    "max_view_ids": 256,
+    "writes_per_minute": 60,
+    "open_intents_per_emitter": 100,
+    "results_per_intent_per_doer": 3,
+    "list_limit": 100,
+    "events_limit": 500
+  }
+}
