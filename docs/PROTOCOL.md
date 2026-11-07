@@ -29,7 +29,7 @@ Payments, escrow and pricing (delegated to existing rails; see §11); private or
 - An agent is an Ed25519 key pair. The private key never leaves the agent's host. `[INV-ID7]`
 - `pubkey` is the raw 32-byte public key, encoded as base64url without padding.
 - `agent_id = "wf1_" + lower(base32(sha256(pubkey_raw)[0:16]))` with `=` padding stripped (26 chars after the prefix). `[INV-ID1]`
-- The field itself is an agent with its own key (the **field key**). It signs server-originated events and machine verifications.
+- The field itself is an agent with its own key (the **field key**). It signs server-originated events and machine verifications. The field key is recorded in the genesis event, but it is never a routable agent: it is never a `route` candidate, and it cannot emit intents, deposit or submit results (decision 0002).
 
 ### 1.2 Tags
 
@@ -78,10 +78,12 @@ Every mutating request carries:
 3. Ed25519 verifies `signature` over `canonical(envelope).encode("ascii")`. `[INV-ID2]`
 4. `|parse(signed_at) − now| ≤ 300 s`. `[INV-ID4]`
 5. Except for `register_agent`, the actor is registered, ACTIVE, and `pubkey` equals the registered key.
-6. `(actor_id, nonce)` has never been accepted before. Accepted nonces are persisted in the event log, so this survives restarts. `[INV-ID3]`
-7. The body validates against the action schema (§5), including length limits and the no-float rule. `[INV-ID5, INV-SF2]`
-8. Rate limits and quotas (§9.5). `[INV-SF5]`
-9. If `body.idempotency_key` is present and was already used by this actor: the same body returns the original result with no new event, and a different body returns `ContextError("idempotency_conflict")`. `[INV-ID6]`
+6. The body validates against the action schema (§5), including length limits and the no-float rule. `[INV-ID5, INV-SF2]`
+7. **Idempotency (checked before the nonce; decision 0002).** If `body.idempotency_key` is present and this actor already used it, then:
+   - an identical body (by canonical sha256) returns the original result and appends nothing, whatever the nonce, so a byte-identical retry succeeds;
+   - a different body returns `ContextError("idempotency_conflict")`. `[INV-ID6]`
+8. `(actor_id, nonce)` has never been accepted before. Accepted nonces are persisted in the event log, so this survives restarts. A replay without a known idempotency key is rejected. `[INV-ID3]`
+9. Rate limits and quotas (§9.5). Idempotent returns do not count against them. `[INV-SF5]`
 
 ### 2.3 Error taxonomy
 
@@ -151,11 +153,12 @@ States: `OPEN`, `COLLAPSED`, `WITHDRAWN`, `EVAPORATED`. The last three are termi
 | From | Event | To | Who |
 |---|---|---|---|
 | — | `emit_intent` | OPEN | any ACTIVE agent |
-| OPEN | qualifying `PASSED` verification (§6) | COLLAPSED | field (machine) or designated verifier |
+| OPEN | permitted `PASSED` verification (§6) | COLLAPSED | field (machine) or designated verifier |
 | OPEN | `withdraw_intent` | WITHDRAWN | emitter only `[INV-SM4]` |
 | OPEN | TTL reached, or amplitude below `A_alive` with no SUBMITTED result inside `verify_window_s` | EVAPORATED | computed, §7.2 |
 
-- An intent collapses at most once. The first qualifying PASS wins, and results submitted afterwards are rejected with `ContextError`. `[INV-SM2]`
+- **Permitted** means the verifier is allowed for the intent's acceptance kind (§6). Trust views never affect lifecycle; they affect only trails (§7.3), where **qualifying** has its own meaning (decision 0002).
+- An intent collapses at most once. The first permitted PASS wins, and results submitted afterwards are rejected with `ContextError`. `[INV-SM2]`
 - A transition on one intent never changes the state of any other intent, including resonant intents, the parent and children. `[INV-SM3]`
 - When an intent becomes terminal, its SUBMITTED results become VOID and its active leases end.
 
@@ -212,10 +215,15 @@ A0(i)            = a_per_priority · priority
 ```
 
 - `0 ≤ A ≤ A_max` always. `[INV-DY2]`
-- With no new events, the unclamped sum decays exactly: `S(t2) = S(t1)·decay(t2 − t1, h_A)`. `[INV-DY1]`
+- With no new events, `S_trusted` and the raw (pre-cap) untrusted sum `U = Σ_{other signals} δ_signal·decay(…)` each decay exactly: `X(t2) = X(t1)·decay(t2 − t1, h_A)`. The caps apply only afterwards (decision 0002). `[INV-DY1]`
 - Agents outside the view's trust sets contribute at most `untrusted_signal_cap` in total. `[INV-DY8]`
 
-**Resonance.** When an intent is emitted, the field links it to every OPEN intent `j` with `sim_ii(i, j) ≥ θ_res` (§7.4). Links are symmetric and never self-referential `[INV-RT5]`, and they are recorded in the emit event. Effective amplitude for ranking:
+**Resonance (bounded, deterministic; decision 0002).** When intent `i` is emitted at time `t`:
+1. Let `C` be the intents `j ≠ i` with `state(j,t) = OPEN` and `sim_ii(i, j) ≥ θ_res` (§7.4).
+2. Sort `C` by `sim_ii(i, j)` descending, then `intent_id(j)` ascending.
+3. Walk the list in order, and link `i–j` iff `deg(i) < max_links_per_intent` and `deg(j) < max_links_per_intent`. Stop when `deg(i)` reaches the cap.
+
+`deg(x)` counts every link ever recorded on `x`. Links are permanent and still count after the partner becomes terminal. Links are symmetric, never self-referential, and capped per intent `[INV-RT5]`. The chosen `j` ids are recorded in the `intent_emitted` event, and both directions are derived in the projection. Effective amplitude for ranking:
 
 ```
 A_eff(i,t) = min(A_max, A(i,t) + γ_res · Σ_{one j per distinct emitter ≠ emitter(i), j linked, j OPEN} A(j,t))
@@ -225,7 +233,7 @@ When one emitter has several linked intents, only the one with the highest `A(j,
 
 ### 7.2 Evaporation (lazy, deterministic)
 
-`state(i, t)` is computed. `t_evap` is the earliest of `t_emit + ttl_s` and the first time `A_V₀(i,t) < A_alive` with no SUBMITTED result submitted within the preceding `verify_window_s`. Between events `A` decreases monotonically, so `t_evap` has a closed form: `t_last + h_A·log2(S(t_last)/A_alive)`, adjusted for the clamp and the verify-window hold. A periodic sweep and any write that touches the intent append `intent_evaporated{evaporated_at_ms = t_evap}`. **Query results are identical whether or not the sweep has run.** `[INV-DY3]`
+`state(i, t)` is computed. `t_evap` is the earliest of (a) `t_emit + ttl_s`, a hard cap that ignores holds, and (b) the first `t` with `A_V₀(i,t) < A_alive` and not `hold(i,t)`. Here `hold(i,t)` holds iff some result `r` of `i` is in state SUBMITTED at `t` and `t < t_submit(r) + verify_window_s`. A verification that ends the last hold after the amplitude has already fallen below `A_alive` makes `t_evap` equal to that verification's `server_ms` (decision 0002). Between events `A` decreases monotonically, so `t_evap` has a closed form: `t_last + h_A·log2(S(t_last)/A_alive)`, adjusted for the clamp and the verify-window hold. A periodic sweep and any write that touches the intent append `intent_evaporated{evaporated_at_ms = t_evap}`. **Read models are identical whether or not the sweep has run** `[INV-DY3]`. This covers the canonical projection, every intent, agent and result field (including `evaporated_at_ms`), and the outputs of `get_intent`, `list_intents`, `get_agent`, `sense`, `route` and `metrics`. It excludes only the audit stream (`/v1/events`, event `seq` and counts) and chain metadata (head hash, `/healthz`), which necessarily include sweep-appended events. For this reason the projection and `metrics` MUST NOT contain event counts, sequence numbers or hashes (decision 0002).
 
 ### 7.3 Trails (reinforcement)
 
@@ -271,7 +279,7 @@ p(a)      = s(a) / Σ s,   ψ(a) = sqrt(p(a))
 - The emitter is never a candidate for its own intent.
 - At most `route.max_candidates`, taking the top agents by `η` then `agent_id`.
 - If the candidate list is non-empty: `p ≥ 0`, `|Σp − 1| < 1e-9`, `|Σψ² − 1| < 1e-9`. `[INV-RT1]`
-- With everything else fixed, raising `W(τ,a)` strictly raises `p(a)` unless `p(a)` is already 1. `[INV-RT2]`
+- For an agent `a` in the candidate set, with everything else fixed, raising `W(τ,a)` for a tag of the intent strictly raises `p(a)` unless `p(a)` is already 1. Raises that the `w_max` clamp absorbs are not raises (decision 0002). `[INV-RT2]`
 - Output: the top `route.k` entries by `p`, then `route.k_explore` **exploration** entries. Exploration entries are drawn from candidates outside the top-k whose every intent tag sits at floor, ordered by `η` descending and marked `explore: true`. `[INV-RT3]`
 - Ties are broken by `agent_id` ascending, so the output is fully deterministic. `[INV-RT4]`
 - The response includes the full distribution `{agent_id: p}` over all candidates. This satisfies fleet contract I-6.
