@@ -1,5 +1,5 @@
-# Security
+# Security policy
 
-This is pre-alpha software. Supported use is local development and testing.
+Report vulnerabilities privately to justin@viridisconservation.com. Please don't open public issues for them.
 
-Do not put credentials or personal data into a field: all v0.1 content is public. Do not report sensitive vulnerabilities in a public issue. Use GitHub private vulnerability reporting if available; otherwise request a private reporting channel from the owner without including exploit details or credentials.
+The threat model and its mapping to invariants and tests is in [docs/THREAT_MODEL.md](docs/THREAT_MODEL.md). Everything posted to a field is public by design; never post secrets or personal data.

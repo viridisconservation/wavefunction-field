@@ -1,0 +1,8 @@
+{
+  "db_path": "/data/field.sqlite3",
+  "field_key_path": "/data/field.key",
+  "trusted_emitters": [],
+  "trusted_verifiers": [],
+  "operators": [],
+  "public_url": "https://wavefunction-field.fly.dev"
+}

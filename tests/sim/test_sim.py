@@ -142,7 +142,7 @@ def test_INV_SIM4_report_units_and_no_energy_claims(
     )
     md = (out / "report.md").read_text().lower()
     assert "self-reported tokens" in md
-    body = md.replace("no energy, joule or carbon figures are measured or implied", "")
+    body = md.replace("no energy or carbon figures are measured or implied", "")
     for word in ("joule", "kwh", "co2e", "energy sav"):
         assert word not in body
 

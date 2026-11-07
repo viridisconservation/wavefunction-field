@@ -185,7 +185,7 @@ def markdown(ev: dict[str, Any], meta: dict[str, Any]) -> str:
         f"- Code commit: `{meta['commit']}`",
         f"- Seeds: {meta['seeds']} · steps: {meta['steps']} · scenarios: {', '.join(meta['scenarios'])}",
         f"- Mode: {'FULL preregistered run' if meta['full'] else 'QUICK smoke run (not preregistered evidence)'}",
-        "- Units: **self-reported tokens** in a simulator. No energy, joule or carbon figures are measured or implied.",
+        "- Units: **self-reported tokens** in a simulator. No energy or carbon figures are measured or implied.",
         "",
         "| Hypothesis | Verdict | Key numbers | Pass rule |",
         "|---|---|---|---|",
