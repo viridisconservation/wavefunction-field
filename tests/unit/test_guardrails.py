@@ -51,14 +51,14 @@ def test_dependency_checker_rejects_unlisted_and_dynamic(tmp_path: Path) -> None
         'build-backend="hatchling.build"\n'
         '[project]\ndependencies=["mcp>=1.25,<2", '
         '"cryptography>=42", "jsonschema>=4.21"]\n'
-        '[project.optional-dependencies]\ndev=["pytest", '
-        '"hypothesis", "ruff", "mypy"]\n'
+        '[project.optional-dependencies]\ndev=["pytest>=8", '
+        '"hypothesis>=6.100", "ruff>=0.6", "mypy>=1.11"]\n'
     )
     project = write(tmp_path, "pyproject.toml", valid)
     assert check_deps.check(tmp_path) == []
     for original, changed in (
         ('"mcp>=1.25,<2"', '"mcp>=2"'),
-        ('"pytest"', '"pytest-socket"'),
+        ('"pytest>=8"', '"pytest-socket"'),
         ('"hatchling"', '"setuptools"'),
         ("dependencies=[", 'dynamic=["dependencies"]\ndependencies=['),
     ):

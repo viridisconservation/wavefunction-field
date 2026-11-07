@@ -7,7 +7,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 RUNTIME = {"mcp>=1.25,<2", "cryptography>=42", "jsonschema>=4.21"}
-DEV = {"pytest", "hypothesis", "ruff", "mypy"}
+DEV = {"pytest>=8", "hypothesis>=6.100", "ruff>=0.6", "mypy>=1.11"}
 BUILD = {"hatchling"}
 
 

@@ -1,4 +1,6 @@
 {
   "$comment": "Updated by Codex in each WP PR: append the WP id when its acceptance checks pass. scripts/check_traceability.py requires tests for every invariant whose wp is listed here.",
-  "completed_wps": []
+  "completed_wps": [
+    "WP-0"
+  ]
 }

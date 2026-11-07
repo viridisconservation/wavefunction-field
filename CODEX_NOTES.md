@@ -48,3 +48,7 @@ Recommended review clarification: require equivalence of lifecycle/read models, 
 - Params canonical SHA-256 without `$comment`: `10991006b2c282c7065af2d1ea8f78a2c258b1037c7daacdb52443a1ea56d873` (matches decision).
 - Hatch data inclusion is WP-1 work and remains unresolved; no package-data assumption is made.
 - The closed dependency list and all normative control files are unchanged.
+
+## Resolved (2026-11-07, build manager)
+- Environment blocker: the build moved to Claude's networked workspace. WP-0 fixes applied: ruff format, an IPv6-unavailable skip, dev-tool minimums and the matching check_deps / guardrail fixture.
+- WP-1 resonance contradiction and WP-4 sweep wording: resolved by decision 0002 (C1, C2).

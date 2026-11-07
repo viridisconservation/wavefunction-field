@@ -58,7 +58,13 @@ def block_outbound_sockets(monkeypatch: pytest.MonkeyPatch) -> None:
         return call
 
     for name in (
-        "connect", "connect_ex", "send", "sendall", "sendto", "sendmsg", "sendfile"
+        "connect",
+        "connect_ex",
+        "send",
+        "sendall",
+        "sendto",
+        "sendmsg",
+        "sendfile",
     ):
         method = getattr(original_socket, name, None)
         if method is not None:

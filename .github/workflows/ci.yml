@@ -22,9 +22,9 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e ".[dev]"
-      - run: ruff check . && ruff format --check .
-      - run: mypy --strict src/wavefunction_field/core src/wavefunction_field/identity
-      - run: pytest -q --hypothesis-profile=ci
+      - run: python -m ruff check . && python -m ruff format --check .
+      - run: python -m mypy --strict src/wavefunction_field/core src/wavefunction_field/identity
+      - run: python -m pytest -q --hypothesis-profile=ci
       - run: python scripts/check_traceability.py
       - run: python scripts/check_deps.py
       - run: python scripts/check_claims.py

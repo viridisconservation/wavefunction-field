@@ -28,7 +28,11 @@ def test_connections_on_existing_socket_classes_are_blocked(
     method: str, family: int
 ) -> None:
     address = ("127.0.0.1", 9) if family == socket.AF_INET else ("::1", 9, 0, 0)
-    with _ORIGINAL_SOCKET(family, socket.SOCK_STREAM) as sock:
+    try:
+        sock_cm = _ORIGINAL_SOCKET(family, socket.SOCK_STREAM)
+    except OSError as exc:  # e.g. EAFNOSUPPORT on hosts without IPv6
+        pytest.skip(f"address family {family} unavailable on this host: {exc}")
+    with sock_cm as sock:
         with pytest.raises(RuntimeError, match="outbound network access"):
             getattr(sock, method)(address)
 
@@ -84,9 +88,7 @@ def test_console_script_help(command: str) -> None:
 
 
 def test_asgi_in_process_transport_remains_usable() -> None:
-    async def application(
-        scope: dict[str, Any], receive: Any, send: Any
-    ) -> None:
+    async def application(scope: dict[str, Any], receive: Any, send: Any) -> None:
         assert scope["type"] == "http"
         await send({"type": "http.response.start", "status": 200, "headers": []})
         await send({"type": "http.response.body", "body": b"in process"})
