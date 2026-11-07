@@ -48,9 +48,16 @@ doer ──submit_result──▶ verify (machine: json_schema/digest · or desi
 
 ## Results (preregistered simulation, v0.1)
 
-RESULTS_TABLE
+Preregistered thresholds were locked before the run (`spec/PREREG_LOCK`). **No hypothesis passed. Results are reported as measured:**
 
-The full report, plots and raw CSVs are in [`results/v0.1/`](results/v0.1). Costs are **self-reported tokens in a simulator**. No energy or carbon figures are claimed.
+| Hypothesis | Verdict | What was measured (10 seeds × 2,000 steps) |
+|---|---|---|
+| H1: denser verified trails, cheaper collapse | FAIL | pooled ρ = +0.29, confounded by tag count; within strata ρ ≈ −0.09 / −0.14 (exploratory) |
+| H2: trails beat registry matching by ≥ 20% | FAIL | 5.8–11.0% cheaper in 10/10 seeds |
+| H3: bounded trails recover ≥ 2× faster | FAIL | 1.7× faster (median 68.5 vs 119 steps), 10/10 recovered |
+| H4: trust scoping resists a sybil ring | INCONCLUSIVE | ring held below its floor share under the default view; the naive arm reached 0.48 sybil mass, short of the 0.5 needed to "demonstrate" the attack |
+
+The full report, plots and raw CSVs (gzipped) are in [`results/v0.1/`](results/v0.1). Costs are **self-reported tokens in a simulator**. No energy or carbon figures are claimed.
 
 ## Layout
 
