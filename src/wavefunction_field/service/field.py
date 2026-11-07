@@ -629,6 +629,46 @@ class FieldService:
         out["state"] = self.proj.state_at(intent, now)
         return out
 
+    def preview_route(
+        self,
+        goal: str,
+        capabilities_needed: list[str],
+        view: Any = None,
+        emitter: str = "",
+        k: int | None = None,
+    ) -> dict[str, Any]:
+        """Read-only routing for a hypothetical intent (nothing is written)."""
+        if not isinstance(goal, str) or len(goal) > self.p.limits["goal_chars"]:
+            raise validation("invalid goal", "goal")
+        if not isinstance(capabilities_needed, list) or not all(
+            isinstance(c, str) and TAG_RE.match(c) for c in capabilities_needed
+        ):
+            raise validation(
+                "capabilities_needed must be a list of tags", "capabilities_needed"
+            )
+        now = self.clock.now_ms()
+        tags = tuple(capabilities_needed)
+        probe = Intent(
+            intent_id="int_preview",
+            emitter=emitter,
+            goal=goal,
+            declared_tags=tags,
+            hypotheses=[{"id": "h1", "summary": goal, "weight": 1}],
+            acceptance={"kind": "digest", "sha256": "0" * 64},
+            side_effects=(),
+            priority=1,
+            ttl_s=self.p.ttl_min_s,
+            parent=None,
+            depth=0,
+            created_ms=now,
+            density_at_emit=0.0,
+            h_bits_at_emit=0.0,
+            text=profile(f"{goal} {goal} {' '.join(tags)}", self.p.stopwords),
+        )
+        return routing.route(
+            self.proj, probe, now, self.parse_view(view), k=k
+        ).as_dict()
+
     def sense(
         self,
         agent_id: str | None = None,
