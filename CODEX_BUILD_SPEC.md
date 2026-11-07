@@ -66,16 +66,18 @@ None in the repo. Do not read, copy or reference any file under the `wavefunctio
 
 ### 3.3 Dependency allowlist (G4)
 - **Runtime:** `mcp>=1.25,<2` (brings `pydantic`, `starlette`, `uvicorn`, `httpx`, `anyio`, `sse-starlette`, `pydantic-settings`), `cryptography>=42`, `jsonschema>=4.21` (brings `referencing`).
-- **Dev:** `pytest`, `hypothesis`, `ruff`, `mypy`.
+- **Dev:** `pytest>=8`, `hypothesis>=6.100`, `ruff>=0.6`, `mypy>=1.11` (minimums per decision 0002). Always invoke them from the project venv as `python -m <tool>`, never a globally installed copy.
 - **Build backend:** `hatchling`.
 - Anything else means stop and write `CODEX_NOTES.md`. No numpy, scipy or matplotlib: stats and SVG plots are written in plain Python.
 
 ### 3.4 Global checks (all must pass in every PR)
+**Preflight (decision 0002).** Before any work, run `python -m pip download --no-deps -d "$(mktemp -d)" hatchling` and `git ls-remote origin`. If either fails, the environment has no network: stop immediately with a one-line blocker. Do not scaffold, write reports, or fetch packages through a browser.
 ```bash
+python -m venv .venv && . .venv/bin/activate
 python -m pip install -e ".[dev]"
-ruff check . && ruff format --check .
-mypy --strict src/wavefunction_field/core src/wavefunction_field/identity
-pytest -q
+python -m ruff check . && python -m ruff format --check .
+python -m mypy --strict src/wavefunction_field/core src/wavefunction_field/identity
+python -m pytest -q
 python scripts/check_traceability.py     # G7
 python scripts/check_deps.py             # G4
 python scripts/check_claims.py           # G5

@@ -1,0 +1,33 @@
+# SPDX-License-Identifier: Apache-2.0
+# Standalone hosted field on Fly.io. Deploy only with Justin's approval:
+#   fly launch --no-deploy --copy-config --config deploy/fly.toml   (first time)
+#   fly volumes create wf_data --size 1 --region bos --config deploy/fly.toml
+#   fly deploy --config deploy/fly.toml
+app = "wavefunction-field"            # [JUSTIN] confirm app name
+primary_region = "bos"
+
+[build]
+  dockerfile = "../Dockerfile"
+
+[env]
+  WF_PUBLIC_URL = "https://wavefunction-field.fly.dev"   # [JUSTIN] or mcp.viridisconservation.com/field
+  WF_DB_PATH = "/data/field.sqlite3"
+  WF_FIELD_KEY_FILE = "/data/field.key"
+  # Set before the FIRST boot; the default trust view is fixed at genesis:
+  #   fly secrets set WF_TRUSTED_EMITTERS=wf1_...,wf1_... WF_OPERATORS=wf1_...
+
+[[mounts]]
+  source = "wf_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 8080
+  force_https = true
+  auto_stop_machines = "off"
+  min_machines_running = 1
+
+  [[http_service.checks]]
+    method = "GET"
+    path = "/healthz"
+    interval = "30s"
+    timeout = "5s"

@@ -15,7 +15,8 @@ If a control file is missing, invalid or self-contradictory, stop and open a dra
 ## Hard rules
 - **Branch + PR only.** Never push to `main`, merge, tag, publish (PyPI, MCP Registry, Smithery, Glama), deploy, change repo visibility, or contact live `*.viridisconservation.com` endpoints.
 - **No secrets.** Never read or reference any `.env` or any file under a `wavefunction/env/` folder. Generate test keys in temp dirs only.
-- **Dependency allowlist** (anything else means stop and ask): runtime `mcp>=1.25,<2`, `cryptography>=42`, `jsonschema>=4.21`; dev `pytest`, `hypothesis`, `ruff`, `mypy`; build `hatchling`.
+- **Dependency allowlist** (anything else means stop and ask): runtime `mcp>=1.25,<2`, `cryptography>=42`, `jsonschema>=4.21`; dev `pytest>=8`, `hypothesis>=6.100`, `ruff>=0.6`, `mypy>=1.11`; build `hatchling`. Run tools from the project venv (`python -m …`).
+- **Network preflight.** If PyPI or GitHub is unreachable from your shell, stop at once with a one-line blocker (CODEX_BUILD_SPEC §3.4).
 - **Core purity.** `src/wavefunction_field/core/` has no I/O, no clock and no RNG.
 - **Never weaken a test, invariant, parameter or preregistered threshold to make something pass.** Normative changes need a decision record that Justin approves.
 - **Claims match evidence.** No quantum, energy, joule, carbon or "proven" claims. "Wavefunction" terms are labelled metaphors.
