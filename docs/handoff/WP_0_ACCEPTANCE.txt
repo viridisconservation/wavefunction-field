@@ -1,0 +1,84 @@
+$ python -m pip install -e ".[dev]"
+Obtaining file:///private/tmp/wavefunction-field-wave-a-20261107
+  Installing build dependencies: started
+  Installing build dependencies: finished with status 'error'
+  error: subprocess-exited-with-error
+  
+  × pip subprocess to install build dependencies did not run successfully.
+  │ exit code: 1
+  ╰─> [7 lines of output]
+      WARNING: Retrying (Retry(total=4, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x103161650>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known')': /simple/hatchling/
+      WARNING: Retrying (Retry(total=3, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x104df58d0>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known')': /simple/hatchling/
+      WARNING: Retrying (Retry(total=2, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x104df6210>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known')': /simple/hatchling/
+      WARNING: Retrying (Retry(total=1, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x104df70d0>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known')': /simple/hatchling/
+      WARNING: Retrying (Retry(total=0, connect=None, read=None, redirect=None, status=None)) after connection broken by 'NewConnectionError('<pip._vendor.urllib3.connection.HTTPSConnection object at 0x104df7bd0>: Failed to establish a new connection: [Errno 8] nodename nor servname provided, or not known')': /simple/hatchling/
+      ERROR: Could not find a version that satisfies the requirement hatchling (from versions: none)
+      ERROR: No matching distribution found for hatchling
+      [end of output]
+  
+  note: This error originates from a subprocess, and is likely not a problem with pip.
+error: subprocess-exited-with-error
+
+× pip subprocess to install build dependencies did not run successfully.
+│ exit code: 1
+╰─> See above for output.
+
+note: This error originates from a subprocess, and is likely not a problem with pip.
+exit_code: 1
+
+$ ruff check . && ruff format --check .
+error: TOML parse error at line 31, column 12
+   |
+31 | [tool.ruff.lint]
+   |            ^^^^
+unknown field `lint`, expected one of `allowed-confusables`, `builtins`, `cache-dir`, `dummy-variable-rgx`, `exclude`, `extend`, `extend-exclude`, `extend-include`, `extend-ignore`, `extend-select`, `extend-fixable`, `extend-unfixable`, `external`, `fix`, `fix-only`, `fixable`, `format`, `force-exclude`, `ignore`, `ignore-init-module-imports`, `include`, `line-length`, `tab-size`, `required-version`, `respect-gitignore`, `select`, `show-source`, `show-fixes`, `src`, `namespace-packages`, `target-version`, `task-tags`, `typing-modules`, `unfixable`, `flake8-annotations`, `flake8-bandit`, `flake8-bugbear`, `flake8-builtins`, `flake8-comprehensions`, `flake8-errmsg`, `flake8-quotes`, `flake8-self`, `flake8-tidy-imports`, `flake8-type-checking`, `flake8-gettext`, `flake8-implicit-str-concat`, `flake8-import-conventions`, `flake8-pytest-style`, `flake8-unused-arguments`, `isort`, `mccabe`, `pep8-naming`, `pycodestyle`, `pydocstyle`, `pyflakes`, `pylint`, `per-file-ignores`, `extend-per-file-ignores`
+
+exit_code: 2
+
+$ mypy --strict src/wavefunction_field/core src/wavefunction_field/identity
+Success: no issues found in 17 source files
+exit_code: 0
+
+$ pytest -q
+ImportError while loading conftest '/private/tmp/wavefunction-field-wave-a-20261107/tests/conftest.py'.
+tests/conftest.py:12: in <module>
+    from hypothesis import settings
+E   ModuleNotFoundError: No module named 'hypothesis'
+exit_code: 4
+
+$ python scripts/check_traceability.py
+traceability: PASS
+exit_code: 0
+
+$ python scripts/check_deps.py
+dependencies: PASS (closed direct runtime/dev/build allowlist)
+exit_code: 0
+
+$ python scripts/check_claims.py
+claims: PASS
+exit_code: 0
+
+$ python scripts/check_headers.py
+headers: PASS
+exit_code: 0
+
+$ python scripts/check_core_purity.py
+core purity: PASS
+exit_code: 0
+
+$ python scripts/check_prereg_lock.py
+preregistration: PASS effcc97f82ba03c5753ae9d55dcfcf0eee599b9b7bf263631b9d26245c16f5fa
+exit_code: 0
+
+$ wf-field --help
+zsh:1: command not found: wf-field
+exit_code: 127
+
+$ wf-agent --help
+zsh:1: command not found: wf-agent
+exit_code: 127
+
+$ wf-sim --help
+zsh:1: command not found: wf-sim
+exit_code: 127
+
