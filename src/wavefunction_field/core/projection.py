@@ -52,6 +52,7 @@ class Result:
     state: str = SUBMITTED
     verified_ms: int | None = None
     verifier: str | None = None
+    evidence: str = ""
 
 
 @dataclass(slots=True)
@@ -271,6 +272,7 @@ class Projection:
         res.state = PASSED if pl["verdict"] == "pass" else FAILED
         res.verified_ms = ms
         res.verifier = pl["verifier"]
+        res.evidence = str(pl.get("evidence", {}).get("summary", ""))
         intent = self.intents[res.intent_id]
         rec = TrailRecord(
             t_ms=ms,
@@ -474,7 +476,10 @@ class Projection:
             "name": {"untrusted": {"author": a.agent_id, "text": a.name}},
             "description": {"untrusted": {"author": a.agent_id, "text": a.description}},
             "capabilities": list(a.capabilities),
-            "links": dict(a.links),
+            "links": {
+                k: {"untrusted": {"author": a.agent_id, "text": v}}
+                for k, v in sorted(a.links.items())
+            },
             "status": a.status,
             "trails": {t: round(self.trail(t, a.agent_id, t_ms, v), 12) for t in tags},
         }
@@ -499,7 +504,7 @@ class Projection:
                 for h in i.hypotheses
             ],
             "entropy_bits": entropy_bits(weights),
-            "acceptance": i.acceptance,
+            "acceptance": self._acceptance_view(i),
             "side_effects": list(i.side_effects),
             "priority": i.priority,
             "ttl_s": i.ttl_s,
@@ -531,13 +536,25 @@ class Projection:
         }
 
     @staticmethod
+    def _acceptance_view(i: Intent) -> dict[str, Any]:
+        acc = i.acceptance
+        out: dict[str, Any] = {"kind": acc["kind"]}
+        if acc["kind"] == "json_schema":
+            out["schema"] = {
+                "untrusted": {"author": i.emitter, "text": canonical(acc["schema"])}
+            }
+        elif acc["kind"] == "digest":
+            out["sha256"] = acc["sha256"]
+        elif acc["kind"] == "designated":
+            out["verifiers"] = list(acc["verifiers"])
+        return out
+
+    @staticmethod
     def _artifact_view(author: str, art: dict[str, Any]) -> dict[str, Any]:
-        out = {k: v for k, v in art.items() if k != "inline"}
-        out["content_type"] = {
-            "untrusted": {"author": author, "text": art["content_type"]}
-        }
-        if "inline" in art:
-            out["inline"] = {"untrusted": {"author": author, "text": art["inline"]}}
+        out: dict[str, Any] = {"sha256": art["sha256"]}
+        for key in ("content_type", "inline", "uri"):
+            if key in art:
+                out[key] = {"untrusted": {"author": author, "text": art[key]}}
         return out
 
     def result_view(self, r: Result, t_ms: int) -> dict[str, Any]:
@@ -552,4 +569,5 @@ class Projection:
             "submitted_ms": r.submitted_ms,
             "verified_ms": r.verified_ms,
             "verifier": r.verifier,
+            "evidence": {"untrusted": {"author": r.verifier or "", "text": r.evidence}},
         }

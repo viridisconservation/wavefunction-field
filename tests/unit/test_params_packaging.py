@@ -12,5 +12,10 @@ ROOT = Path(__file__).resolve().parents[2]
 
 
 def test_packaged_params_match_spec() -> None:
-    assert default_params_mapping() == json.loads((ROOT / "spec/params.json").read_text())
-    assert load_params().sha256 == "10991006b2c282c7065af2d1ea8f78a2c258b1037c7daacdb52443a1ea56d873"
+    assert default_params_mapping() == json.loads(
+        (ROOT / "spec/params.json").read_text()
+    )
+    assert (
+        load_params().sha256
+        == "10991006b2c282c7065af2d1ea8f78a2c258b1037c7daacdb52443a1ea56d873"
+    )

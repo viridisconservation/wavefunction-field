@@ -688,8 +688,33 @@ class FieldService:
     def events(self, after_seq: int = 0, limit: int = 100) -> dict[str, Any]:
         limit = max(1, min(int(limit), self.p.limits["events_limit"]))
         out = []
+        keys = (
+            "event_id",
+            "type",
+            "actor_id",
+            "server_ms",
+            "payload",
+            "envelope",
+            "pubkey",
+            "signature",
+        )
         for event in self.store.iter_events(int(after_seq)):
-            out.append(event)
+            # Audit stream: payloads/envelopes go out as untrusted canonical text so
+            # verifiers can recompute hashes and signatures (PROTOCOL §8, §9.1).
+            body = canonical({k: event[k] for k in keys})
+            out.append(
+                {
+                    "seq": event["seq"],
+                    "type": event["type"],
+                    "actor_id": event["actor_id"],
+                    "server_ms": event["server_ms"],
+                    "prev_hash": event["prev_hash"],
+                    "hash": event["hash"],
+                    "body": {
+                        "untrusted": {"author": event["actor_id"] or "", "text": body}
+                    },
+                }
+            )
             if len(out) >= limit:
                 break
         return {"events": out}
