@@ -1,0 +1,111 @@
+{
+  "$comment": "Preregistered simulation design for WFP v0.1. Frozen before the first run. The report must embed sha256(canonical(this file)) and show PASS / FAIL / INCONCLUSIVE per hypothesis exactly as measured. Editing this file after the first committed run requires a decision record in docs/decisions/ explaining why, plus a full re-run; CI enforces this via spec/PREREG_LOCK.",
+  "version": "0.1.0",
+  "seeds": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10],
+  "time": {"steps": 2000, "step_s": 3600, "warmup_steps": 200},
+  "world": {
+    "tags": ["t00", "t01", "t02", "t03", "t04", "t05", "t06", "t07", "t08", "t09", "t10", "t11"],
+    "honest_agents": 40,
+    "declared_tags_per_agent": 3,
+    "competence_declared": {"dist": "uniform", "low": 0.2, "high": 0.95},
+    "competence_undeclared": 0.05,
+    "competence_multi_tag_rule": "min over intent tags",
+    "honest_emitters": 10,
+    "honest_emitters_in_V0": true,
+    "intents_per_step": {"dist": "poisson", "lambda": 3},
+    "tags_per_intent": {"choices": [1, 2], "probs": [0.5, 0.5]},
+    "hypotheses_per_intent": {"dist": "uniform_int", "low": 1, "high": 4},
+    "hypothesis_weight": {"dist": "uniform_int", "low": 1, "high": 10},
+    "priority": 5,
+    "ttl_s": 604800,
+    "acceptance_kind_honest": "digest",
+    "attempt_tokens": {"base": 1000, "noise": "abs_normal", "sigma": 0.2},
+    "max_attempts_per_intent": 10,
+    "rng": "random.Random(seed) owned by the simulator only; core receives no RNG"
+  },
+  "policy": {
+    "mode": "emitter_route",
+    "description": "On emit, the emitter calls route(intent) under the arm's view and params, samples one agent from the returned full distribution with the simulator RNG, excludes agents already tried for this intent, and lets the agent attempt. Success with probability = competence. A success submits the correct digest (machine PASS); a failure submits a wrong digest (machine FAIL). Repeat until PASS or max_attempts, then withdraw (counted as abandoned with its full cost). All attempts for one intent happen within its emit step at increasing millisecond offsets."
+  },
+  "metrics": {
+    "cost_to_collapse_tokens": "sum of self-reported tokens over all results submitted to the intent (passed and failed); abandoned intents included at their total cost",
+    "attempts": "number of results submitted to the intent",
+    "density_at_emit": "server-computed density_at_emit from the intent_emitted event (PROTOCOL §7.3)",
+    "H_bits": "entropy of the intent's hypotheses at emit",
+    "expected_success_probe": "E_s(t) = Σ_a p(a)·competence(a, tag) for a probe route() on a synthetic intent with the given tag, computed read-only each step without emitting it",
+    "sybil_mass": "Σ over sybil agents of p(a) in route() for honest intents"
+  },
+  "arms": {
+    "WFP": {"params_override": {}, "view": "V0"},
+    "B0_random": {"params_override": {"route.alpha": 0.0, "route.beta": 0.0}, "view": "V0"},
+    "B1_registry": {"params_override": {"route.alpha": 0.0}, "view": "V0"},
+    "B2_unbounded": {"params_override": {"trail.w_min": 1e-06, "trail.w_max": 1e9}, "view": "V0"},
+    "B3_naive_trust": {"params_override": {}, "view": "ALL_REGISTERED_AGENTS"}
+  },
+  "arm_rule": "All arms run the production FieldService. Arms differ only by params override and trust view; no arm re-implements routing or dynamics (INV-SIM1).",
+  "scenarios": {
+    "S1_steady": {"arms": ["WFP", "B0_random", "B1_registry"], "shock": null, "sybils": null},
+    "S2_shock": {
+      "arms": ["WFP", "B2_unbounded"],
+      "shock": {
+        "at_step": 1000,
+        "focus_tag": "t00",
+        "effect": "every existing agent's competence on t00 becomes 0.1; one new agent registers with capabilities [t00] and competence 0.9 on t00",
+        "probe_tag": "t00"
+      },
+      "sybils": null
+    },
+    "S3_sybil": {
+      "arms": ["WFP", "B3_naive_trust"],
+      "shock": null,
+      "sybils": {
+        "agents": 10,
+        "declare_all_tags": true,
+        "competence": 0.0,
+        "emitters": 5,
+        "emitters_in_V0": false,
+        "ring_intents_per_step": 10,
+        "ring_acceptance": "designated, verifier = another sybil; the sybil verifier always passes; doer is a third sybil",
+        "start_step": 0
+      }
+    }
+  },
+  "hypotheses": {
+    "H1_density": {
+      "scenario": "S1_steady",
+      "arm": "WFP",
+      "statement": "Denser verified neighbourhoods collapse more cheaply.",
+      "test": "Per seed: Spearman rank correlation (average ranks for ties) between density_at_emit and cost_to_collapse_tokens over intents emitted after warmup.",
+      "pass": "median over seeds ≤ -0.20 AND at least 8 of 10 seeds have rho < 0"
+    },
+    "H2_learning_beats_registry": {
+      "scenario": "S1_steady",
+      "statement": "Trail reinforcement lowers cost versus capability-similarity routing alone.",
+      "test": "Per seed: mean cost_to_collapse_tokens over intents emitted in steps 1000-1999, WFP vs B1_registry.",
+      "pass": "WFP_mean ≤ 0.80 × B1_mean in at least 9 of 10 seeds"
+    },
+    "H3_no_lock_in": {
+      "scenario": "S2_shock",
+      "statement": "Bounded trails (MAX-MIN) re-route to a new competent agent faster than unbounded trails.",
+      "test": "recovery_steps = first step after the shock at which E_s(t) for probe tag t00 ≥ 0.9 × mean E_s over the 50 steps before the shock; censored at run end (counted as remaining steps).",
+      "pass": "median_seeds(recovery_WFP) ≤ 0.5 × median_seeds(recovery_B2) AND WFP is uncensored in at least 8 of 10 seeds"
+    },
+    "H4_sybil_resistance": {
+      "scenario": "S3_sybil",
+      "statement": "Trust-scoped reinforcement keeps a self-verifying sybil ring at floor.",
+      "test": "Mean sybil_mass over honest intents emitted in steps 1000-1999, per arm. Baseline m0 = mean sybil_mass over honest intents in steps 0-49 under WFP.",
+      "pass": "WFP mean ≤ 2 × m0 in all 10 seeds AND B3_naive_trust mean ≥ 0.5 in at least 8 of 10 seeds",
+      "inconclusive": "If WFP passes but B3_naive_trust does not reach ≥ 0.5, report INCONCLUSIVE (the attack was not demonstrated), never PASS."
+    }
+  },
+  "exploratory_not_tested": [
+    "tokens per bit (cost_to_collapse_tokens / H_bits) for intents with H_bits > 0, by arm",
+    "sense-mode (agents pull via sense) instead of emitter_route",
+    "sensitivity sweeps of theta_res, gamma_res, w_min/w_max ratio"
+  ],
+  "reporting": {
+    "outputs": ["report.md", "report.json", "intents.csv", "probe.csv", "svg plots"],
+    "units": "tokens (self-reported in the simulator). No joules, energy or carbon claims.",
+    "determinism": "Same scenario + seed + code → byte-identical outputs (INV-SIM2)."
+  }
+}
