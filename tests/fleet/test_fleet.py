@@ -67,6 +67,7 @@ async def test_INV_FL1_process_never_raises(payload: Any) -> None:
     h, _, _ = _field()
     out = await WavefunctionSearchAgent(h.svc).process(payload)
     assert out["ok"] in (True, False)
+    assert out["status"] == ("ok" if out["ok"] else "error")
     if not out["ok"]:
         assert out["error"]["error_type"] in TAXONOMY
 

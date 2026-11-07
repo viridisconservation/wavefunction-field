@@ -32,7 +32,9 @@ def _safe(fn: Any) -> dict[str, Any]:
         }
 
 
-def build_field_mcp(svc: FieldService, *, public: bool = False) -> FastMCP:
+def build_field_mcp(
+    svc: FieldService, *, public: bool = False, rest: bool = False, public_url: str = ""
+) -> FastMCP:
     security = TransportSecuritySettings(enable_dns_rebinding_protection=not public)
     fm = FastMCP(
         "wavefunction-field",
@@ -153,6 +155,31 @@ def build_field_mcp(svc: FieldService, *, public: bool = False) -> FastMCP:
             )
         )
 
+    @fm.tool(
+        description=describe(
+            "Fleet contract describe(): name, version, capabilities and role."
+        )
+    )
+    def describe_agent() -> dict[str, Any]:
+        from wavefunction_field import __version__
+        from wavefunction_field.fleet.agent import FLEET_VERSION
+
+        return {
+            "name": "wavefunction-search-agent",
+            "implementation": f"wavefunction-field {__version__}",
+            "version": FLEET_VERSION,
+            "capabilities": ["intent-routing", "stigmergic-field", "verified-trails"],
+            "a2a_role": "router",
+            "field_agent_id": svc.signer.agent_id,
+        }
+
+    if rest:
+        # Serve the REST surface from the same app so a single mount (e.g. the
+        # fleet gateway's /wavefunction) carries both MCP and /v1 HTTP.
+        from wavefunction_field.api.http import rest_routes
+
+        for r in rest_routes(svc, public_url):
+            fm.custom_route(r.path, methods=sorted(r.methods or {"GET"}))(r.endpoint)
     return fm
 
 

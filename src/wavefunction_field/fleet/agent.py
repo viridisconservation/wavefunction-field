@@ -21,6 +21,9 @@ from wavefunction_field.fleet.adapters.compute_ledger import ComputeLedgerSink
 from wavefunction_field.fleet.adapters.identity_registry import IdentityRegistrySource
 from wavefunction_field.service.field import FieldService
 
+# Fleet-contract version of the wavefunction-search-agent mount (agent.yaml);
+# the prototype it replaces shipped 0.1.x (production) and 0.2.0 (open core).
+FLEET_VERSION = "0.3.0"
 ACTIONS = ("sense", "route", "get_intent", "list_intents", "field_info", "write")
 
 
@@ -45,6 +48,7 @@ class WavefunctionSearchAgent:
         self.calls += 1
         return {
             **body,
+            "status": "ok" if body.get("ok") else "error",
             "session_id": self.session_id,
             "budget_consumed": {"calls": self.calls},
         }
@@ -129,7 +133,8 @@ class WavefunctionSearchAgent:
         return {
             "status": h["status"],
             "agent": self.name,
-            "version": __version__,
+            "version": FLEET_VERSION,
+            "implementation": f"wavefunction-field {__version__}",
             "timestamp": datetime.now(UTC).isoformat(),
             "checks": {"store_head_seq": h["head_seq"]},
         }
@@ -137,7 +142,8 @@ class WavefunctionSearchAgent:
     def describe(self) -> dict[str, Any]:
         return {
             "name": self.name,
-            "version": __version__,
+            "version": FLEET_VERSION,
+            "implementation": f"wavefunction-field {__version__}",
             "capabilities": ["intent-routing", "stigmergic-field", "verified-trails"],
             "inputs": {"action": list(ACTIONS)},
             "outputs": [

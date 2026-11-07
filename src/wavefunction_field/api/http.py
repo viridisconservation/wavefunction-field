@@ -55,9 +55,9 @@ def _int_param(request: Request, name: str, default: int) -> int:
     return int(value)
 
 
-def create_app(
-    svc: FieldService, *, public_url: str = "", mount_mcp: bool = True
-) -> Starlette:
+def rest_routes(svc: FieldService, public_url: str = "") -> list[Route]:
+    """The REST surface as plain routes (reused by the fleet gateway mount)."""
+
     async def guarded(fn: Any) -> JSONResponse:
         try:
             return JSONResponse(fn())
@@ -137,7 +137,7 @@ def create_app(
     async def healthz(request: Request) -> JSONResponse:
         return JSONResponse(svc.health())
 
-    routes: list[Any] = [
+    return [
         Route("/v1/write", write, methods=["POST"]),
         Route("/v1/sense", sense, methods=["POST"]),
         Route("/v1/route", route, methods=["POST"]),
@@ -149,6 +149,12 @@ def create_app(
         Route("/.well-known/wavefunction-field.json", well_known, methods=["GET"]),
         Route("/healthz", healthz, methods=["GET"]),
     ]
+
+
+def create_app(
+    svc: FieldService, *, public_url: str = "", mount_mcp: bool = True
+) -> Starlette:
+    routes: list[Any] = list(rest_routes(svc, public_url))
     lifespan = None
     if mount_mcp:
         from wavefunction_field.mcp.field_server import build_field_mcp
