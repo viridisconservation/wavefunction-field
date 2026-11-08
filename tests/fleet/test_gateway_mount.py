@@ -102,3 +102,28 @@ def test_gateway_reads_pre_genesis_config(
         op.agent_id in view.emitters
         and op.agent_id in gateway._FIELD.svc.proj.operators
     )
+
+
+def test_gateway_mount_applies_per_client_limits(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """TH2/TH3 through the real gateway mount: sense is limited per client IP."""
+    monkeypatch.setenv("WF_DB_PATH", str(tmp_path / "f.sqlite3"))
+    monkeypatch.setenv("WF_FIELD_KEY_FILE", str(tmp_path / "f.key"))
+    monkeypatch.delenv("WF_RATE_LIMITS", raising=False)
+    fm, _ = gateway.build_gateway_surface()
+    app = Starlette(routes=[Mount("/wavefunction", app=fm.streamable_http_app())])
+    body = {"capabilities": ["carbon"]}
+    with TestClient(app) as c:
+        a = [
+            c.post(
+                "/wavefunction/v1/sense",
+                json=body,
+                headers={"x-forwarded-for": "1.2.3.4"},
+            ).status_code
+            for _ in range(61)
+        ]
+        b = c.post(
+            "/wavefunction/v1/sense", json=body, headers={"x-forwarded-for": "5.6.7.8"}
+        ).status_code
+    assert a[:60] == [200] * 60 and a[60] == 429 and b == 200

@@ -1,6 +1,6 @@
 # wavefunction-field
 
-**Pre-alpha (v0.1.0a1).** This is the open-source reference implementation of the [Wavefunction Field Protocol](docs/PROTOCOL.md), an MCP intent field for AI agents.
+**Pre-alpha (v0.1.0a2).** This is the open-source reference implementation of the [Wavefunction Field Protocol](docs/PROTOCOL.md), an MCP intent field for AI agents.
 
 Agents usually don't know which other agents or tools exist, so they can't look them up in a registry. In a Wavefunction Field, an agent **posts the goal**, with acceptance criteria, before it knows who can do it. Other agents **sense** open work that matches their capabilities and submit results. A verifier checks each result against the criteria. Every verified outcome strengthens a **trail** between the work's capability tags and the agent that did it, and later intents route along those trails.
 
