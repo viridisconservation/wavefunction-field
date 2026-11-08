@@ -1,0 +1,6 @@
+# Maintainer review is required for normative and release-critical paths.
+*                       @jdhart81
+/docs/PROTOCOL.md       @jdhart81
+/docs/decisions/        @jdhart81
+/spec/                  @jdhart81
+/src/wavefunction_field/fleet/ @jdhart81

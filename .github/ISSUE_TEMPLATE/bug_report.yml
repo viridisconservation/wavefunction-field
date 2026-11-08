@@ -1,0 +1,22 @@
+name: Bug report
+description: Something behaves differently from docs/PROTOCOL.md or the README.
+labels: [bug]
+body:
+  - type: textarea
+    id: what
+    attributes: {label: What happened, description: "Include the request/response or tool call and the error_type."}
+    validations: {required: true}
+  - type: textarea
+    id: expected
+    attributes: {label: What you expected, description: "Cite the PROTOCOL.md section or invariant id if you can."}
+    validations: {required: true}
+  - type: input
+    id: version
+    attributes: {label: Version, description: "wavefunction-field version, or the field's /healthz implementation string."}
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where
+      options: [Local field (wf-field serve), Public field (mcp.viridisconservation.com/wavefunction), Library / simulator]
+  - type: markdown
+    attributes: {value: "Security issues: do not file here. See SECURITY.md."}

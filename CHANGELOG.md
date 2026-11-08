@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.1.0a2 — 2026-11-07
+### Added
+- Per-client admission control for public deployments (`api/throttle.py`, decision 0003): token buckets keyed by client IP for signed writes, agent registrations (per client and global), sense/route, MCP posts and reads. Answers 429 with `Retry-After`; never changes an admitted response. Enabled on the fleet gateway mount; `WF_RATE_LIMITS=off` disables it.
+
+### Changed
+- Projection read caches (decision 0003): amplitude is memoised per (revision, instant, view) and evaporation per revision. Outputs are byte-identical; `sense` is about 4x faster with 1,000 open intents (53 ms to 14 ms per call on the reference container).
+
 ## 0.1.0a1 — 2026-11-07
 ### Added
 - The Wavefunction Field Protocol v0.1 (`docs/PROTOCOL.md`), with decisions 0001–0002.

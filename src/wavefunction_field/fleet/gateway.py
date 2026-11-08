@@ -70,4 +70,11 @@ def build_gateway_surface() -> tuple[FastMCP, GatewayAgent]:
     svc, cfg = build_service(config if Path(config).is_file() else None)
     _FIELD = WavefunctionSearchAgent(svc)
     fm = build_field_mcp(svc, public=True, rest=True, public_url=cfg.public_url)
+    from wavefunction_field.api import throttle
+
+    if throttle.enabled():
+        # The gateway mounts fm.streamable_http_app(); wrap it with per-client
+        # admission control (agent ids are free to mint, client IPs are not).
+        inner = fm.streamable_http_app
+        fm.streamable_http_app = lambda: throttle.Throttle(inner())  # type: ignore[method-assign,assignment,return-value]
     return fm, GatewayAgent()

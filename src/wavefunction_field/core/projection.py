@@ -138,9 +138,17 @@ class Projection:
         self._views: dict[str, _ViewTrails] = {}
         self.write_times: dict[str, deque[int]] = {}
         self.last_ms = 0
+        # Read caches (pure memoisation, no semantic effect). Every mutation goes
+        # through apply(), which bumps _rev and so invalidates both caches.
+        self._rev = 0
+        self._evap_rev = -1
+        self._evap: dict[str, int] = {}
+        self._amp_tag: tuple[int, int, TrustView] | None = None
+        self._amp: dict[str, float] = {}
 
     # ------------------------------------------------------------------ fold
     def apply(self, event: dict[str, Any]) -> None:
+        self._rev += 1
         etype = event["type"]
         pl = event["payload"]
         ms = int(event["server_ms"])
@@ -327,11 +335,27 @@ class Projection:
         )
 
     def amplitude(self, intent: Intent, t_ms: int, view: TrustView) -> float:
+        tag = (self._rev, t_ms, view)
+        if self._amp_tag != tag:
+            self._amp_tag, self._amp = tag, {}
+        cached = self._amp.get(intent.intent_id)
+        if cached is not None:
+            return cached
         s, u = self.amplitude_parts(intent, t_ms, view)
-        return dyn.combine_amplitude(s, u, self.p.untrusted_signal_cap, self.p.A_max)
+        out = dyn.combine_amplitude(s, u, self.p.untrusted_signal_cap, self.p.A_max)
+        self._amp[intent.intent_id] = out
+        return out
 
     def evaporation_ms(self, intent: Intent) -> int:
         """Closed-form t_evap under the default view, from recorded events (§7.2)."""
+        if self._evap_rev != self._rev:
+            self._evap_rev, self._evap = self._rev, {}
+        cached = self._evap.get(intent.intent_id)
+        if cached is None:
+            cached = self._evap[intent.intent_id] = self._evaporation_ms(intent)
+        return cached
+
+    def _evaporation_ms(self, intent: Intent) -> int:
         p = self.p
         last = intent.created_ms
         if intent.signals:
