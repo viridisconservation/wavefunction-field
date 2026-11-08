@@ -1,17 +1,34 @@
 # Contributing
 
-This pre-alpha repository follows AGENTS.md and CODEX_BUILD_SPEC.md. PROTOCOL.md is normative. Open one branch and PR per work package; stacked PRs target the previous work package branch. Do not merge or publish from a build-agent session.
+Thanks for helping. Wavefunction Field is pre-alpha; the protocol can still change, but only through a written decision.
 
-Use conventional commit subjects and sign off every commit with the Developer Certificate of Origin, Version 1.1: https://developercertificate.org/.
+## Ground rules
+- **`docs/PROTOCOL.md` is normative.** Changes to protocol text, `spec/params.json`, `spec/invariants.json` or the preregistered thresholds need a decision record in `docs/decisions/` and an issue first (use the *Protocol change* template). Everything else is an ordinary PR.
+- **Claims must match evidence.** No quantum, energy, carbon-saving or "proven alignment" claims unless an artifact in this repository measures them (`scripts/check_claims.py` enforces the obvious ones).
+- **`core/` stays pure:** no I/O, clock or randomness (`scripts/check_core_purity.py`).
+- **Every invariant has a named test.** If you touch behaviour covered by an invariant, keep or extend its test (`scripts/check_traceability.py`).
+- **Everything posted to a field is public.** Never put secrets or personal data in fixtures, examples or issues.
+
+## Workflow
+1. Open an issue (bug, feature or protocol change) unless the fix is trivial.
+2. Branch from `main`, keep the PR focused, use conventional commit subjects (`fix:`, `feat:`, `docs:` …).
+3. Sign off every commit (Developer Certificate of Origin 1.1, https://developercertificate.org/): `git commit -s`. CI rejects PRs with unsigned commits.
+4. Add `SPDX-License-Identifier: Apache-2.0` to new source files.
+5. Run the checks below and paste their output in the PR.
 
 ```bash
-git commit --signoff -m "chore: describe the change"
+python -m venv .venv && . .venv/bin/activate
+pip install -e ".[dev]"
+python -m ruff check . && python -m ruff format --check .
+python -m mypy --strict src/wavefunction_field
+python -m pytest -q
+for s in traceability deps claims headers core_purity prereg_lock; do python scripts/check_$s.py; done
 ```
 
-The sign-off certifies your right to contribute under the Apache-2.0 license. Add `SPDX-License-Identifier: Apache-2.0` to source files.
+Hypothesis uses at least 500 examples locally and 200 in CI (`--hypothesis-profile=ci`). Tests must not open network sockets; use in-process transports. Benchmarks are marked `bench` and run with `pytest -m bench`.
 
-Run every acceptance command from CODEX_BUILD_SPEC.md §3.4 before opening a ready PR. Paste the actual command outputs into the PR using the §0.6 template. A blocked work package stays incomplete and opens a draft PR with CODEX_NOTES.md.
+## Running agents against the public field
+See the README section *Use the public field*. Please keep test traffic small, label it in the goal text, and withdraw intents you don't intend to complete.
 
-Hypothesis uses the `local` profile (at least 500 examples) by default. CI selects `--hypothesis-profile=ci` (at least 200 examples). Benchmarks marked `bench` are excluded from ordinary pytest runs; select them with `pytest -m bench`.
-
-Use generated test keys only in temporary directories. Tests prohibit network sockets; use Unix sockets or in-process transports. No normative protocol, parameter, invariant or experiment-threshold changes without an approved decision record.
+## Security
+Report vulnerabilities privately (see `SECURITY.md`), never in a public issue.

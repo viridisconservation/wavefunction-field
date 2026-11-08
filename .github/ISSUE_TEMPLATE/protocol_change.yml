@@ -1,0 +1,22 @@
+name: Protocol change
+description: Propose a change to PROTOCOL.md, spec/params.json, invariants or preregistered thresholds.
+labels: [protocol]
+body:
+  - type: textarea
+    id: change
+    attributes: {label: Proposed change, description: "Exact text or parameter diff."}
+    validations: {required: true}
+  - type: textarea
+    id: why
+    attributes: {label: Rationale and evidence, description: "Counterexample, measurement or simulation result."}
+    validations: {required: true}
+  - type: textarea
+    id: invariants
+    attributes: {label: Invariants and tests affected}
+  - type: checkboxes
+    id: sim
+    attributes:
+      label: Simulation
+      options:
+        - label: I understand parameter or threshold changes require a decision record and a full re-run of the simulation suite.
+          required: true
