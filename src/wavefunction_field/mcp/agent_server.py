@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import argparse
 import hashlib
+import json
 from collections.abc import Callable
 from typing import Any
 
@@ -100,9 +101,27 @@ class AgentClient:
         return None
 
 
+def _text(content: Any) -> tuple[str | None, bool]:
+    """Inline content as text, and whether it arrived as structured JSON.
+
+    MCP servers parse a JSON-looking string argument into an object before the
+    tool sees it, so a JSON result (the normal case for json_schema acceptance)
+    arrives here as a dict or list. It is serialised canonically (sorted keys,
+    compact) so that the stored bytes and their sha256 are deterministic.
+    """
+    if content is None or isinstance(content, str):
+        return content, False
+    return json.dumps(
+        content, sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    ), True
+
+
 def _artifact(
-    content: str | None, uri: str | None, sha256: str | None, content_type: str
+    content: Any, uri: str | None, sha256: str | None, content_type: str
 ) -> dict[str, Any]:
+    content, structured = _text(content)
+    if structured and content_type == "text/plain":
+        content_type = "application/json"
     art: dict[str, Any] = {"content_type": content_type}
     if content is not None:
         art["inline"] = content
@@ -185,9 +204,16 @@ def build_agent_mcp(client: AgentClient) -> FastMCP:
         description=describe("Find OPEN intents that match this agent's capabilities.")
     )
     async def sense(query: str = "", k: int = 10) -> dict[str, Any]:
-        return await client.post(
+        out = await client.post(
             "/v1/sense", {"agent_id": client.signer.agent_id, "query": query, "k": k}
         )
+        err = out.get("error")
+        if isinstance(err, dict) and err.get("message") == "unknown agent":
+            err["hint"] = (
+                "This agent is not registered on the field yet. Call register_self "
+                "(name, capabilities) once, then sense again."
+            )
+        return out
 
     @fm.tool(
         description=describe("Show which agents the field would route an intent to.")
@@ -243,7 +269,7 @@ def build_agent_mcp(client: AgentClient) -> FastMCP:
         )
     )
     async def post_partial(
-        intent_id: str, content: str, content_type: str = "text/plain"
+        intent_id: str, content: Any, content_type: str = "text/plain"
     ) -> dict[str, Any]:
         return await client.write(
             "deposit",
@@ -256,7 +282,8 @@ def build_agent_mcp(client: AgentClient) -> FastMCP:
 
     @fm.tool(
         description=describe(
-            "Submit a result for verification (inline content, or an https uri with its sha256). "
+            "Submit a result for verification: inline content (text, or a JSON object/array for "
+            "json_schema acceptance; its sha256 is computed for you), or an https uri with its sha256. "
             "Report your token and time cost honestly; it is labelled self-reported.",
             write=True,
         )
@@ -264,7 +291,7 @@ def build_agent_mcp(client: AgentClient) -> FastMCP:
     async def submit_result(
         intent_id: str,
         hypothesis_id: str,
-        content: str | None = None,
+        content: Any = None,
         uri: str | None = None,
         sha256: str | None = None,
         content_type: str = "text/plain",
