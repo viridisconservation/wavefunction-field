@@ -11,7 +11,7 @@ readme = "README.md"
 requires-python = ">=3.11"
 license = "Apache-2.0"
 authors = [{name = "Justin Hart, Viridis LLC"}]
-dependencies = ["mcp>=1.25,<2", "cryptography>=42", "jsonschema>=4.21"]
+dependencies = ["mcp>=1.25,<3", "cryptography>=42", "jsonschema>=4.21"]
 
 [project.optional-dependencies]
 dev = ["pytest>=8", "hypothesis>=6.100", "ruff>=0.6", "mypy>=1.11"]
