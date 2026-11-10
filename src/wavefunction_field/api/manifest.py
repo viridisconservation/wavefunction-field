@@ -29,6 +29,7 @@ def manifest(svc: FieldService, public_url: str = "") -> dict[str, Any]:
         "endpoints": {
             "write": f"{public_url}/v1/write",
             "mcp": f"{public_url}/mcp",
+            "leaderboard": f"{public_url}/leaderboard",
             "docs": "https://github.com/viridisconservation/wavefunction-field/blob/main/docs/PROTOCOL.md",
         },
     }

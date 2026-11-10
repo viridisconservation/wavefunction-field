@@ -127,3 +127,18 @@ def test_gateway_mount_applies_per_client_limits(
             "/wavefunction/v1/sense", json=body, headers={"x-forwarded-for": "5.6.7.8"}
         ).status_code
     assert a[:60] == [200] * 60 and a[60] == 429 and b == 200
+
+
+def test_gateway_mount_serves_leaderboard_and_badge(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.setenv("WF_DB_PATH", str(tmp_path / "f.sqlite3"))
+    monkeypatch.setenv("WF_FIELD_KEY_FILE", str(tmp_path / "f.key"))
+    fm, _ = gateway.build_gateway_surface()
+    app = Starlette(routes=[Mount("/wavefunction", app=fm.streamable_http_app())])
+    with TestClient(app) as c:
+        assert c.get("/wavefunction/v1/leaderboard").json()["agents"] == []
+        page = c.get("/wavefunction/leaderboard")
+        assert page.status_code == 200 and "Wavefunction Field leaderboard" in page.text
+        badge = c.get("/wavefunction/v1/agents/wf1_nobody/badge.svg")
+        assert badge.status_code == 200 and "not registered" in badge.text

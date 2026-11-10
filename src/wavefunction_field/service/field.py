@@ -35,6 +35,7 @@ from wavefunction_field.core.projection import (
     TERMINAL,
     Intent,
     Projection,
+    qualifies,
 )
 from wavefunction_field.core.resonance import links_for
 from wavefunction_field.core.similarity import LexicalSimilarity, profile
@@ -801,6 +802,83 @@ class FieldService:
                 k: (statistics.median(v) if v else None) for k, v in buckets.items()
             },
         }
+
+    def standings(self) -> list[dict[str, Any]]:
+        """Verified work per agent under the default view (PROTOCOL §7.3 qualification).
+
+        Counts only qualifying verifications: verifier and emitter in the default
+        view, doer different from both. Ordered by passes (desc), most recent pass
+        (desc), agent id. Derived from recorded events only.
+        """
+        view = self.default_view
+        rows: dict[str, dict[str, Any]] = {}
+        for rec in self.proj.trail_log:
+            if not qualifies(rec, view) or rec.doer not in self.proj.agents:
+                continue
+            row = rows.setdefault(
+                rec.doer,
+                {
+                    "verified_jobs": 0,
+                    "failed_jobs": 0,
+                    "first_ms": None,
+                    "last_ms": None,
+                },
+            )
+            if rec.verdict == "pass":
+                row["verified_jobs"] += 1
+                row["first_ms"] = (
+                    rec.t_ms if row["first_ms"] is None else row["first_ms"]
+                )
+                row["last_ms"] = rec.t_ms
+            else:
+                row["failed_jobs"] += 1
+        now = self.clock.now_ms()
+        out = []
+        for agent_id, row in rows.items():
+            if row["verified_jobs"] == 0:
+                continue
+            a = self.proj.agents[agent_id]
+            trails = self.proj.agent_view(a, now)["trails"]
+            top = sorted(trails.items(), key=lambda kv: (-kv[1], kv[0]))[:3]
+            out.append(
+                {
+                    "agent_id": agent_id,
+                    "name": {"untrusted": {"author": agent_id, "text": a.name}},
+                    "status": a.status,
+                    "verified_jobs": row["verified_jobs"],
+                    "failed_jobs": row["failed_jobs"],
+                    "first_verified_ms": row["first_ms"],
+                    "last_verified_ms": row["last_ms"],
+                    "top_trails": [{"tag": t, "weight": w} for t, w in top if w > 0],
+                }
+            )
+        out.sort(
+            key=lambda r: (-r["verified_jobs"], -r["last_verified_ms"], r["agent_id"])
+        )
+        for rank, row in enumerate(out, 1):
+            row["rank"] = rank
+        return out
+
+    def leaderboard(self, limit: int = 50) -> dict[str, Any]:
+        if not 1 <= limit <= 200:
+            raise validation("limit must be 1-200", "limit")
+        rows = self.standings()
+        return {
+            "view": "default",
+            "basis": "qualifying verifications (PROTOCOL 7.3)",
+            "agents_ranked": len(rows),
+            "verified_jobs_total": sum(r["verified_jobs"] for r in rows),
+            "agents": rows[:limit],
+        }
+
+    def verified_jobs(self, agent_id: str) -> int | None:
+        """Qualifying passes for one agent; None if the agent is not registered."""
+        if agent_id not in self.proj.agents:
+            return None
+        return next(
+            (r["verified_jobs"] for r in self.standings() if r["agent_id"] == agent_id),
+            0,
+        )
 
     def health(self) -> dict[str, Any]:
         seq, head = self.store.head()
