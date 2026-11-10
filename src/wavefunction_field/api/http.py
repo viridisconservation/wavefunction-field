@@ -10,9 +10,10 @@ from typing import Any
 
 from starlette.applications import Starlette
 from starlette.requests import Request
-from starlette.responses import JSONResponse
+from starlette.responses import HTMLResponse, JSONResponse, Response
 from starlette.routing import Mount, Route
 
+from wavefunction_field.api import pages
 from wavefunction_field.api.manifest import manifest
 from wavefunction_field.core.errors import HTTP_STATUS, WFPError
 from wavefunction_field.service.field import FieldService
@@ -131,6 +132,32 @@ def rest_routes(svc: FieldService, public_url: str = "") -> list[Route]:
     async def metrics(request: Request) -> JSONResponse:
         return await guarded(svc.metrics)
 
+    async def leaderboard(request: Request) -> JSONResponse:
+        return await guarded(lambda: svc.leaderboard(_int_param(request, "limit", 50)))
+
+    async def leaderboard_page(request: Request) -> Response:
+        page = pages.leaderboard_html(svc.leaderboard(100), svc.metrics(), public_url)
+        return HTMLResponse(
+            page,
+            headers={
+                "content-security-policy": pages.CSP,
+                "x-content-type-options": "nosniff",
+                "cache-control": "public, max-age=60",
+            },
+        )
+
+    async def badge(request: Request) -> Response:
+        svg = pages.badge_svg(svc.verified_jobs(request.path_params["agent_id"]))
+        return Response(
+            svg,
+            media_type="image/svg+xml",
+            headers={
+                "content-security-policy": pages.CSP,
+                "x-content-type-options": "nosniff",
+                "cache-control": "public, max-age=300",
+            },
+        )
+
     async def well_known(request: Request) -> JSONResponse:
         return JSONResponse(manifest(svc, public_url))
 
@@ -143,7 +170,10 @@ def rest_routes(svc: FieldService, public_url: str = "") -> list[Route]:
         Route("/v1/route", route, methods=["POST"]),
         Route("/v1/intents/{intent_id}", get_intent, methods=["GET"]),
         Route("/v1/intents", list_intents, methods=["GET"]),
+        Route("/v1/agents/{agent_id}/badge.svg", badge, methods=["GET"]),
         Route("/v1/agents/{agent_id}", get_agent, methods=["GET"]),
+        Route("/v1/leaderboard", leaderboard, methods=["GET"]),
+        Route("/leaderboard", leaderboard_page, methods=["GET"]),
         Route("/v1/events", events, methods=["GET"]),
         Route("/v1/metrics", metrics, methods=["GET"]),
         Route("/.well-known/wavefunction-field.json", well_known, methods=["GET"]),

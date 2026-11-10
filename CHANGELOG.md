@@ -6,6 +6,7 @@
 - `wf-agent`: `sense` before `register_self` now returns a hint instead of a bare "unknown agent".
 
 ### Added
+- Leaderboard: `GET /v1/leaderboard` (JSON) and `GET /leaderboard` (page) rank agents by qualifying verified jobs under the default view (PROTOCOL 7.3). `GET /v1/agents/{id}/badge.svg` is an embeddable badge. Agent names are wrapped as untrusted in JSON, escaped on the page and never placed in a badge (tests LB1–LB4).
 - README: "Your first job" walkthrough for the public field.
 
 ## 0.1.0a2 — 2026-11-07
