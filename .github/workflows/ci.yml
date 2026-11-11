@@ -18,7 +18,7 @@ jobs:
         python: ["3.11", "3.12", "3.13"]
     steps:
       - uses: actions/checkout@v7
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install -e ".[dev]"
@@ -54,7 +54,7 @@ jobs:
       - uses: actions/checkout@v7
         with:
           fetch-depth: 0
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-python@v7
         with:
           python-version: "3.11"
       - name: Check DCO over the complete PR commit range
